@@ -1,4 +1,4 @@
-/* 
+/*
 The MIT License (MIT)
 
 Copyright (c) 2015 Nathan Jewell
@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -37,28 +38,60 @@ import (
 		ITEM CLASSES
 -----------------------------------------*/
 type Item interface {
-	Use(b *Buffalo) 
+	use(b *Buffalo)
 }
 
 type statPot struct {
 	name, stat string
-	strength int
+	strength   int
 }
 
-func (sP statPot) Use(b *Buffalo) {
+func (sP statPot) use(b *Buffalo) {
 	fmt.Printf("Using %v", sP)
-	switch stat {
-		case "fullness": b.feed(strength)
-		case "happiness": b.play(strength)
-		case "energy": b.rest(strength)
+	switch sP.stat {
+	case "fullness":
+		b.feed(sP.strength)
+	case "happiness":
+		b.entertain(sP.strength)
+	case "energy":
+		b.energize(sP.strength)
 	}
 }
 
 func (sP statPot) String() string {
-	return fmt.Sprintf("" ...)
+	return fmt.Sprintf("statpot of type %v and strength %v.\n", sP.stat, sP.strength)
 }
 
+/*---------------------------------------
+		INVENTORY CLASS
+-----------------------------------------*/
+type Inventory struct {
+	items []Item
+}
 
+func (i *Inventory) init() {
+	i.items = make([]Item, 2)
+}
+
+func (i Inventory) String() string {
+	var toreturn string = ""
+	toreturn += fmt.Sprintf("------------INVENTORY------------\n\n")
+	for c := 0; c < len(i.items); c++ {
+		toreturn += fmt.Sprintf("%v: %v", c+1, i.items[c])
+	}
+	toreturn += fmt.Sprintf("\n---------------------------------\n")
+	return toreturn
+}
+
+func (i *Inventory) add(it Item) {
+	i.items = append(i.items, it)
+}
+
+func (i *Inventory) use(which int, b *Buffalo) {
+	fmt.Printf("%v", i.items[0])
+	i.items[which-1].use(b)
+	i.items = append(i.items[:which], i.items[which+1:]...)
+}
 
 /*---------------------------------------
 		BUFFALO CLASS
@@ -67,7 +100,11 @@ type Buffalo struct {
 	name                               string
 	fullness, happiness, energy, combo int
 	fBar, hBar, eBar                   string
-	invMap map[string]Item
+	inv                                Inventory
+}
+
+func (b Buffalo) init() {
+	b.inv.init()
 }
 
 func (b *Buffalo) feed(a int) {
@@ -129,15 +166,25 @@ func (b *Buffalo) calcBars() {
 	b.combo = b.energy + b.fullness + b.happiness
 }
 
+func (b Buffalo) printInv() {
+	fmt.Printf("%v", b.inv)
+}
+
 /*---------------------------------------
 		MAIN FUNCTIONS
 -----------------------------------------*/
 func main() {
 	var myB Buffalo
+	myB.init()
 	myB.feed(9)
 	myB.entertain(9)
 	myB.energize(9)
 	myB.calcBars()
+	var hapPot statPot
+	hapPot.stat = "happiness"
+	hapPot.strength = 3
+	myB.inv.add(hapPot)
+	myB.inv.add(hapPot)
 	alive := true
 
 	reader := bufio.NewReader(os.Stdin)
@@ -206,7 +253,8 @@ func checkHealth(b *Buffalo) bool {
 func doCMDIn(s string, b *Buffalo) bool {
 	if strings.Contains(s, "help") {
 		fmt.Println("\nType 'explore', 'play', 'rest' or 'eat' to do it.")
-		fmt.Println("Type stat to see your current energy, happiness and fullness.\n")
+		fmt.Println("Type stat to see your current energy, happiness and fullness.")
+		fmt.Println("View inventory with 'inv' and use item with 'use [num]'.\n")
 		return false
 	} else if strings.Contains(s, "explore") {
 		fmt.Println("\nYou explored quite the good amount of stuff. Something bad could've happened though...")
@@ -229,9 +277,37 @@ func doCMDIn(s string, b *Buffalo) bool {
 	} else if strings.Contains(s, "stat") {
 		printBuffalo(*b)
 		return false
+	} else if strings.Contains(s, "inv") {
+		b.printInv()
+		return false
+	} else if strings.Contains(s, "use") {
+		var char string
+		var is bool
+
+		for __, i := range s {
+			var _ = __
+			char = string(i)
+
+			if char == " " {
+				is = true
+			} else if is {
+				break
+			}
+
+		}
+		if is {
+			num, err := strconv.Atoi(char)
+			if err != nil {
+				//fail gracefully?
+			}
+			b.inv.use(num, b)
+		}
+
+		return false
+
 	} else {
 		fmt.Println("Invalid command - do it again.\n")
-		return false //invalide command exit state
+		return false
 	}
 	return true //command successfully executed
 }
