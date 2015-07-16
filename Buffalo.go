@@ -38,15 +38,16 @@ import (
 		ITEM CLASSES
 -----------------------------------------*/
 type Item interface {
-	use(b *Buffalo)
+	use(b *Buffalo) bool
 }
 
 type statPot struct {
 	name, stat string
 	strength   int
+	useable    bool
 }
 
-func (sP statPot) use(b *Buffalo) {
+func (sP statPot) use(b *Buffalo) bool {
 	fmt.Printf("Using %v", sP)
 	switch sP.stat {
 	case "fullness":
@@ -56,10 +57,32 @@ func (sP statPot) use(b *Buffalo) {
 	case "energy":
 		b.energize(sP.strength)
 	}
+	return sP.useable
 }
 
 func (sP statPot) String() string {
 	return fmt.Sprintf("statpot of type %v and strength %v.\n", sP.stat, sP.strength)
+}
+
+type emptyItem struct {
+	useable bool
+}
+
+func (ei emptyItem) use(b *Buffalo) bool {
+	fmt.Println("This is not a useable item.\n")
+	return false
+}
+
+func (ei emptyItem) String() string {
+	return "...\n"
+}
+
+type weaponItem struct {
+	useable bool
+}
+
+func (wI weaponItem) use(b *Buffalo) {
+
 }
 
 /*---------------------------------------
@@ -70,7 +93,7 @@ type Inventory struct {
 }
 
 func (i *Inventory) init() {
-	i.items = make([]Item, 2)
+	i.items = make([]Item, 1)
 }
 
 func (i Inventory) String() string {
@@ -88,9 +111,16 @@ func (i *Inventory) add(it Item) {
 }
 
 func (i *Inventory) use(which int, b *Buffalo) {
-	fmt.Printf("%v", i.items[0])
-	i.items[which-1].use(b)
-	i.items = append(i.items[:which], i.items[which+1:]...)
+	if which <= len(i.items) {
+		fmt.Printf("%v", i.items[which-1])
+		if i.items[which-1].use(b) {
+			i.items = append(i.items[:which-1], i.items[which:]...)
+
+		}
+	} else {
+		fmt.Println("\nThat is not a valid item.")
+	}
+
 }
 
 /*---------------------------------------
@@ -180,11 +210,19 @@ func main() {
 	myB.entertain(9)
 	myB.energize(9)
 	myB.calcBars()
+
 	var hapPot statPot
 	hapPot.stat = "happiness"
 	hapPot.strength = 3
+	hapPot.useable = true
+
+	var eI emptyItem
+	eI.useable = false
+
 	myB.inv.add(hapPot)
 	myB.inv.add(hapPot)
+	myB.inv.add(eI)
+
 	alive := true
 
 	reader := bufio.NewReader(os.Stdin)
