@@ -201,6 +201,21 @@ func (b Buffalo) printInv() {
 }
 
 /*---------------------------------------
+		MAP FUNCTIONS
+-----------------------------------------*/
+type Map struct {
+	width, height int
+}
+
+type Tile interface {
+	print()
+}
+
+type basicTile struct {
+	char strings
+}
+
+/*---------------------------------------
 		MAIN FUNCTIONS
 -----------------------------------------*/
 func main() {
