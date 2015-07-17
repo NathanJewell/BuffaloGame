@@ -29,10 +29,13 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"time"
 )
+
+const ()
 
 /*---------------------------------------
 		ITEM CLASSES
@@ -126,6 +129,7 @@ func (i *Inventory) use(which int, b *Buffalo) {
 /*---------------------------------------
 		BUFFALO CLASS
 -----------------------------------------*/
+
 type Buffalo struct {
 	name                               string
 	fullness, happiness, energy, combo int
@@ -137,6 +141,8 @@ func (b Buffalo) init() {
 	b.inv.init()
 }
 
+//feed, entertain and energize simply add/subract a certain stat from the buffalo
+//they also give a small print statement to notify the user
 func (b *Buffalo) feed(a int) {
 	b.fullness += a
 	if a < 0 {
@@ -175,6 +181,7 @@ func (b Buffalo) String() string {
 }
 
 func (b *Buffalo) calcBars() {
+	//iterates through stats and creates strings for each one that reflect amount of each one
 	b.fBar, b.hBar, b.eBar = "", "", ""
 	for i := 0; i < 10; i++ {
 		if i < b.fullness {
@@ -205,20 +212,163 @@ func (b Buffalo) printInv() {
 -----------------------------------------*/
 type Map struct {
 	width, height int
+	tiles         [][]Tile
+}
+
+func (m *Map) print() {
+	clearScreen()
+	for y := range m.tiles {
+		for x := range m.tiles[y] {
+			//fmt.Printf("%v", m.tiles[y][x])
+			fmt.Printf(m.tiles[y][x].print())
+		}
+		fmt.Print("\n")
+	}
+}
+
+func (m *Map) init(h, w int) {
+	m.height = h
+	m.width = w
+	m.tiles = make([][]Tile, m.height)
+	fmt.Println("HERE")
+	for y := range m.tiles {
+		m.tiles[y] = make([]Tile, m.width)
+	}
+	fmt.Println("HERE")
+	m.create()
+	fmt.Println("HERE")
+}
+
+func (m *Map) create() {
+	for y := range m.tiles {
+		for x := range m.tiles[y] {
+			var tmp basicTile
+			tmp.init("green")
+			m.tiles[y][x] = tmp
+		}
+	}
 }
 
 type Tile interface {
-	print()
+	print() string
 }
 
 type basicTile struct {
-	char strings
+	color string
 }
+
+func (bT *basicTile) init(c string) {
+	bT.color = stringToColor(c)
+	if strings.Contains(bT.color, "error") {
+		printError(fmt.Sprintf("Invalid color input, defaulting to black... inp= %v", c), false)
+		bT.color = "40"
+	}
+}
+
+func (bT basicTile) print() string {
+	return fmt.Sprintf("\033[%vm \033[40m", bT.color)
+}
+
+func (bT basicTile) String() string {
+	return fmt.Sprintf("\033[%vm \033[40m", bT.color)
+}
+
+func stringToColor(color string) string { //convert alphanum color to int string
+	tmp, err := strconv.Atoi(color)
+	if err != nil {
+		switch color {
+		case "black":
+			return "40"
+		case "red":
+			return "41"
+		case "green":
+			return "42"
+		case "yellow":
+			return "43"
+		case "blue":
+			return "44"
+		case "magenta":
+			return "45"
+		case "cyan":
+			return "46"
+		case "white":
+			return "47"
+
+			return "error"
+		}
+	} else {
+		if tmp >= 40 && tmp <= 47 {
+			return color
+		}
+	}
+	return "error"
+}
+
+func clearScreen() {
+	clear := make(map[string]func()) //Initialize it
+	clear["linux"] = func() {
+		cmd := exec.Command("clear") //Linux example, its tested
+		cmd.Stdout = os.Stdout
+		cmd.Run()
+	}
+	clear["windows"] = func() {
+		cmd := exec.Command("cls") //Windows example it is untested, but I think its working
+		cmd.Stdout = os.Stdout
+		cmd.Run()
+	}
+}
+
+func (m *Map) createSquare(x, y, width, height int, color string) {
+	if y > m.height || x > m.width || x+width > m.width || y+height > m.height || y < 0 || x < 0 {
+		printError(fmt.Sprintf("Attempted out of bound to 'pixel' array.\nYou probably can't draw that here.\nx: %v y: %v h: %v w: %v c: %v\n", x, y, height, width, color), false)
+		return
+	}
+
+	var tmp basicTile
+	tmp.init("color")
+
+	for c := y; c < y+height; c++ {
+		for i := x; i < x+width; i++ {
+			m.tiles[c][i] = tmp
+		}
+	}
+
+}
+
+func printError(err string, fatal bool) {
+	if fatal {
+		fmt.Printf("\n---------------FATAL ERROR---------------\n")
+		fmt.Printf("%v\n", err)
+		fmt.Printf("Terminating program... ")
+		fmt.Print("ENTER to continue...")
+		bufio.NewReader(os.Stdin).ReadBytes('\n')
+		os.Exit(1)
+
+	} else {
+		fmt.Printf("\n------------------ERROR------------------\n")
+		fmt.Printf("%v\n", err)
+		fmt.Printf("Continuing program... ")
+		fmt.Print("ENTER to continue...")
+		bufio.NewReader(os.Stdin).ReadBytes('\n')
+	}
+}
+
+/*
+40	Black
+41	Red
+42	Green
+43	Yellow
+44	Blue
+45	Magenta
+46	Cyan
+47	White
+*/
 
 /*---------------------------------------
 		MAIN FUNCTIONS
 -----------------------------------------*/
 func main() {
+	fmt.Printf("\03316m")
 	var myB Buffalo
 	myB.init()
 	myB.feed(9)
@@ -240,6 +390,10 @@ func main() {
 
 	alive := true
 
+	var gameMap Map
+	gameMap.init(10, 10)
+	gameMap.createSquare(2, 2, 3, 3, "blue")
+
 	reader := bufio.NewReader(os.Stdin)
 
 	fmt.Println("--------------------------------------------------------------------------")
@@ -257,7 +411,7 @@ func main() {
 		myB.fullness -= 1
 
 		for {
-
+			gameMap.print()
 			fmt.Println("Enter a command: ")
 			cmdInput, _ := reader.ReadString('\n')
 			if !doCMDIn(cmdInput, &myB) { //parse and execute command
@@ -310,11 +464,13 @@ func doCMDIn(s string, b *Buffalo) bool {
 		fmt.Println("View inventory with 'inv' and use item with 'use [num]'.\n")
 		return false
 	} else if strings.Contains(s, "explore") {
-		fmt.Println("\nYou explored quite the good amount of stuff. Something bad could've happened though...")
-		b.entertain(genRand(-3, 5))
-		b.energize(genRand(-3, 5))
-		b.feed(genRand(-3, 5))
-		fmt.Println("")
+		/*
+			fmt.Println("\nYou explored quite the good amount of stuff. Something bad could've happened though...")
+			b.entertain(genRand(-3, 5))
+			b.energize(genRand(-3, 5))
+			b.feed(genRand(-3, 5))
+			fmt.Println("")
+		*/
 	} else if strings.Contains(s, "play") {
 		fmt.Println("\nYou frolicked in the flowers and sunshine.")
 		b.entertain(2)
@@ -351,9 +507,11 @@ func doCMDIn(s string, b *Buffalo) bool {
 		if is {
 			num, err := strconv.Atoi(char)
 			if err != nil {
-				//fail gracefully?
+				fmt.Println("That item does not exist.\n")
+			} else {
+				b.inv.use(num, b)
 			}
-			b.inv.use(num, b)
+
 		}
 
 		return false
