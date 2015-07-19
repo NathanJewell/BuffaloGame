@@ -98,7 +98,7 @@ func (r *rectangle) make(s *Screen) {
 	}
 
 	var tmp basicPixel
-	tmp.init("color")
+	tmp.init(r.color)
 
 	for c := r.y; c < r.y+r.height; c++ {
 		for i := r.x; i < r.x+r.width; i++ {
