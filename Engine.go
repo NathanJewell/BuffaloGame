@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	//"math/rand"
+	//"math"
 	"os"
 	"os/exec"
 	"strconv"
@@ -55,6 +56,12 @@ func (s *Screen) fill(color string) {
 	}
 }
 
+func (s *Screen) setPixel(x, y int, color string) {
+	var tmp basicPixel
+	tmp.color = stringToColor(color)
+	s.pixels[y][x] = tmp
+}
+
 type Pixel interface {
 	print() string
 }
@@ -98,7 +105,7 @@ func (r *rectangle) make(s *Screen) {
 	}
 
 	var tmp basicPixel
-	tmp.init("color")
+	tmp.init(r.color)
 
 	for c := r.y; c < r.y+r.height; c++ {
 		for i := r.x; i < r.x+r.width; i++ {
@@ -121,6 +128,87 @@ func (r *rectangle) setArrayPos(p int) {
 
 func (r *rectangle) getArrayPos() int {
 	return r.arrPos
+}
+
+type ellipse struct {
+	x, y, rx, ry, arrPos int
+	color                string
+}
+
+func (e *ellipse) make(s *Screen) {
+
+}
+
+func (e *ellipse) destroy(s *Screen) {
+
+}
+
+func (e *ellipse) setArrayPos(p int) {
+	e.arrPos = p
+}
+
+func (e *ellipse) getArrayPos() int {
+	return e.arrPos
+}
+
+type line struct {
+	x1, y1, x2, y2, arrPos int
+	color                  string
+}
+
+func (l *line) make(s *Screen) {
+	dx := l.x2 - l.x2
+	if dx < 0 {
+		dx = -dx
+	}
+
+	dy := l.y2 - l.y1
+	if dy < 0 {
+		dy = -dy
+	}
+
+	var sx, sy int
+	if l.x2 < l.x2 {
+		sx = 1
+	} else {
+		sx = -1
+	}
+
+	if l.y1 < l.y2 {
+		sy = 1
+	} else {
+		sy = -1
+	}
+
+	err := dx - dy
+
+	for {
+		s.setPixel(l.x2, l.y1, l.color)
+		if l.x2 == l.x2 && l.y1 == l.y2 {
+			break
+		}
+		e2 := 2 * err
+		if e2 > -dy {
+			err -= dy
+			l.x2 += sx
+		}
+		if e2 < dx {
+			err += dx
+			l.y1 += sy
+		}
+	}
+}
+
+func (l *line) destroy(s *Screen) {
+
+}
+
+func (l *line) setArrayPos(p int) {
+	l.arrPos = p
+}
+
+func (l *line) getArrayPos() int {
+	return l.arrPos
 }
 
 func (s *Screen) makeObject(o Object) {
@@ -154,8 +242,8 @@ func printError(err string, fatal bool) {
 	} else {
 		fmt.Printf("\n------------------ERROR------------------\n")
 		fmt.Printf("%v\n", err)
-		fmt.Printf("Continuing program... ")
-		fmt.Print("ENTER to continue...")
+		fmt.Printf("Continuing program...\n")
+		fmt.Print("ENTER to continue...\n")
 		bufio.NewReader(os.Stdin).ReadBytes('\n')
 	}
 }
@@ -216,7 +304,14 @@ func main() {
 	myRect.height = 5
 	myRect.color = "red"
 
+	var myLine line
+	myLine.x1 = 0
+	myLine.x2 = 4
+	myLine.y1 = 0
+	myLine.y2 = 4
+
 	myScreen.makeObject(&myRect)
+	myScreen.makeObject(&myLine)
 
 	for {
 		myScreen.print()
@@ -224,6 +319,6 @@ func main() {
 		myRect.x += 1
 		myRect.y += 1
 		myRect.color = "green"
-		myScreen.makeObject(&myRect)
+		//myScreen.makeObject(&myRect)
 	}
 }
